@@ -1,0 +1,6 @@
+Import('env')
+Import('env_modules')
+
+env_geotiff = env_modules.Clone()
+env.AppendUnique(LIBS=['tiff','geotiff'])
+env_geotiff.add_source_files(env.modules_sources, "*.cpp")
