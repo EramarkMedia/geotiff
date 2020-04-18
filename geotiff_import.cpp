@@ -1,14 +1,15 @@
 #include "core/print_string.h"
 #include "core/class_db.h"
+#include "core/color.h"
 #include "core/image.h"
 #include "core/os/os.h"
 #include "core/io/resource_saver.h"
 #include "geotiff_import.h"
 #include <geotiff/xtiffio.h>
 #include <vector>
+#include <algorithm>
 
 void GeotiffImportPlugin::_bind_methods() {
-	//ClassDB::bind_method(D_METHOD("do_test"), &TestRef::do_test);
 }
 
 String GeotiffImportPlugin::get_importer_name() const {
@@ -81,50 +82,60 @@ public:
 		ERR_FAIL_COND_MSG((buf.size()*sizeof(float)) < GetTileSize(), "buffer too small to store tile");
 		TIFFReadTile(tif, buf.data(), x, y, 0, 0);
 	}
+	inline void ReadScanline(std::vector<float> &buf, unsigned int row) {
+		TIFFReadScanline(tif, buf.data(), row);
+	}
 };
 
-Error GeotiffImportPlugin::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
-	print_line("(" + p_source_file + "," + p_save_path + ")");
-	//print_line("**" + OS::get_singleton()->get_resource_dir());
-	//print_line("*-" + OS::get_singleton()->get_resource_dir() + p_save_path.substr(5));
+constexpr unsigned int minuint(const unsigned int a, const unsigned int b) {
+	if (a < b) return a;
+	else return b;
+}
 
+Error GeotiffImportPlugin::import(const String &p_source_file, const String &p_save_path, const Map<StringName, Variant> &p_options, List<String> *r_platform_variants, List<String> *r_gen_files, Variant *r_metadata) {
 	String source_path = OS::get_singleton()->get_resource_dir() + p_source_file.substr(5);
-	String save_path = OS::get_singleton()->get_resource_dir() + p_save_path.substr(5) + ".exr";
+	//String save_path = OS::get_singleton()->get_resource_dir() + p_save_path.substr(5) + ".exr";
 	
-	Ref<Image> image_import;
+	unsigned int width, height;
+	PoolVector<uint8_t> *image_data = memnew(PoolVector<uint8_t>);
 	
 	{
 		TiffFile tiff_file = TiffFile(source_path);
 		if (!tiff_file) { return ERR_FILE_CANT_READ; }
-		const unsigned int height = tiff_file.GetHeight();
-		const unsigned int width = tiff_file.GetWidth();
+		height = tiff_file.GetHeight();
+		width = tiff_file.GetWidth();
+		image_data->resize(width * height * sizeof(float));
+		float* p_image_data = (float*)image_data->write().ptr();
+		
 		const unsigned int tile_height = tiff_file.GetTileHeight();
-		const unsigned int tile_width = tiff_file.GetTileWidth();
-		const unsigned int tile_size = tiff_file.GetTileSize();
-		print_line("tile_size = " + String::num_uint64(tile_size));
-		if (tile_size != tile_height * tile_width * sizeof(float)) { return ERR_FILE_UNRECOGNIZED; }
-		image_import.instance();
-		image_import->create(width, height, false, Image::Format::FORMAT_RF);
-		std::vector<float> buf = std::vector<float>(tile_width * tile_height);
-		for (unsigned int y = 0; y < height; y += tile_height) {
-			for (unsigned int x = 0; x < width; x += tile_width) {
-				if (x == 0 && y == 0) { print_line(String::num_real(buf[0])); }
-				tiff_file.ReadTile(buf, x, y);
-				if (x == 0 && y == 0) { print_line(String::num_real(buf[0])); }
+		print_line("tile_height = " + String::num_uint64(tile_height));
+		if (tile_height == 0) {
+			std::vector<float> buf = std::vector<float>(width);
+			for (unsigned int row = 0; row < height; row++) {
+				tiff_file.ReadScanline(buf, row);
+				std::copy_n(&buf[0], width, &p_image_data[row * width]);
+			}
+		}
+		else {
+			const unsigned int tile_width = tiff_file.GetTileWidth();
+			std::vector<float> buf = std::vector<float>(tile_width * tile_height);
+			for (unsigned int y = 0; y < height; y += tile_height) {
+				for (unsigned int x = 0; x < width; x += tile_width) {
+					tiff_file.ReadTile(buf, x, y);
+					unsigned int row_width = minuint(tile_width, width - x);
+					unsigned int row_count = minuint(tile_height, height - y);
+					for (unsigned int row = 0; row < row_count; row++) {
+						std::copy_n(&buf[row * tile_width], row_width, &p_image_data[(y + row) * width + x]);
+					}
+				}
 			}
 		}
 	}
 	
-	return FAILED;
+	Ref<Image> image_import;
+	image_import.instance();
+	image_import->create(width, height, false, Image::Format::FORMAT_RF, *image_data);
+	memdelete(image_data);
 	
-	List<String> *p_extensions = memnew(List<String>);
-	ResourceSaver::get_recognized_extensions(image_import, p_extensions);
-	print_line("Size " + String::num_uint64(p_extensions->size()));
-	for (int i = 0; i < p_extensions->size(); i++) {
-		print_line((*p_extensions)[i]);
-	}
-	//Error ret = image_import->save_exr(save_path, true);
-	Error ret = ResourceSaver::save(p_save_path + ".res", image_import);
-	print_line("ding" + String::num_uint64((uint64_t)ret));
-	return ret;
+	return ResourceSaver::save(p_save_path + ".res", image_import);
 }
