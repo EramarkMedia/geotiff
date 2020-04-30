@@ -1,6 +1,7 @@
 #include "tile_generator.h"
 #include "modules/voxel/voxel_buffer.h"
 #include "modules/voxel/math/vector3i.h"
+#include <cmath>
 
 TileGenerator::TileGenerator() : _floor_elevation(0), _ceiling_elevation(256) {
 	std::function<size_t(key_t)> hash_f = [](key_t k) {
@@ -57,21 +58,12 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 	const int stride = 1 << input.lod;
 	const int y_low = input.origin_in_voxels.y;
 	const int y_high = y_low + (buffer_size.y - 1) * stride;
-
-	//auto it = _tile_map.find(key_t{.x=1,.z=1});
-	//if (it == _tile_map.end()) {
-		//print_line("generate_block: end");
-	//}
-	//else {
-		//print_line("generate_block: _tile_map[1,1] = " + it->second);
-	//}
 	
 	if (y_high <= _floor_elevation) {
 		out_buffer.fill(1, 1);
 		return;
 	}
 	
-	//out_buffer.fill(0, 1);
 	if (y_low >= _ceiling_elevation) return;
 	
 	const int x_low = input.origin_in_voxels.x;
@@ -80,9 +72,8 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 	const int z_high = z_low + (buffer_size.z - 1) * stride;
 	
 	const int tile_size = 3000;
-	int tile_x_index = x_low / tile_size;
-	int tile_z_index = z_low / tile_size;
-	auto it = _tile_map.find(key_t{.x = tile_x_index, .z = tile_z_index});
+	key_t tile_key = _get_tile_key_from_position(x_low, z_low);
+	auto it = _tile_map.find(tile_key);
 	RES tile_res;
 	if (it != _tile_map.end()) {
 		tile_res = ResourceLoader::load(it->second);
@@ -93,10 +84,10 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 		const int x_position = x_low + xi * stride;
 		for (int zi = 0; zi < buffer_size.z; zi++) {
 			const int z_position = z_low + zi * stride;
-			if (tile_x_index != x_position / tile_size || tile_z_index != z_position / tile_size) {
-				tile_x_index = x_low / tile_size;
-				tile_z_index = z_low / tile_size;
-				it = _tile_map.find(key_t{.x = tile_x_index, .z = tile_z_index});
+			const key_t tile_key_for_position = _get_tile_key_from_position(x_position, z_position);
+			if (tile_key != tile_key_for_position) {
+				tile_key = tile_key_for_position;
+				it = _tile_map.find(tile_key);
 				if (it != _tile_map.end()) {
 					tile_res = ResourceLoader::load(it->second);
 					tile_img = Ref<Image>(Object::cast_to<Image>(*tile_res));
@@ -114,18 +105,21 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 				tile_img->lock();
 				const float elevation_at_position = tile_img->get_pixel(tile_reference_position_x, tile_reference_position_z).r;
 				tile_img->unlock();
-				if (elevation_at_position < y_high) {
-					if (elevation_at_position < y_low) {
+				if (elevation_at_position >= y_low) {
+					if (elevation_at_position >= y_high) {
 						out_buffer.fill_area(1,
-							Vector3i(tile_reference_position_x, 0, tile_reference_position_z),
-							Vector3i(tile_reference_position_x, buffer_size.y, tile_reference_position_z),
+							Vector3i(xi, 0, zi),
+							Vector3i(xi+1, buffer_size.y, zi+1),
 							1);
 					}
 					else {
+						float integral_part = 0;
+						float fractional_part = std::modf(elevation_at_position, &integral_part);
 						out_buffer.fill_area(1,
-							Vector3i(tile_reference_position_x, 0, tile_reference_position_z),
-							Vector3i(tile_reference_position_x, elevation_at_position - y_low, tile_reference_position_z),
+							Vector3i(xi, 0, zi),
+							Vector3i(xi+1, (int)integral_part - y_low - 1, zi+1),
 							1);
+						out_buffer.set_voxel_f(fractional_part, xi, elevation_at_position - y_low, zi, 1);
 					}
 				}
 			}
