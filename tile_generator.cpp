@@ -101,7 +101,6 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 			if (tile_img.is_valid()) {
 				const int tile_reference_position_x = absmod(x_position, tile_size);
 				const int tile_reference_position_z = absmod(z_position, tile_size);
-				//print_line("ref: " + String::num_int64(tile_reference_position_x) + ", " + String::num_int64(tile_reference_position_z));
 				tile_img->lock();
 				const float elevation_at_position = tile_img->get_pixel(tile_reference_position_x, tile_reference_position_z).r;
 				tile_img->unlock();
