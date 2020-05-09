@@ -115,11 +115,13 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 					else {
 						float integral_part = 0;
 						float fractional_part = std::modf(elevation_at_position, &integral_part);
-						out_buffer.fill_area(1,
+						const int top_cell = (int)((integral_part - (float)y_low) / (float)stride);
+						const float top_cell_value = fractional_part / (float)stride;
+						out_buffer.fill_area(0,
 							Vector3i(xi, 0, zi),
-							Vector3i(xi+1, (int)integral_part - y_low - 1, zi+1),
+							Vector3i(xi+1, top_cell, zi+1),
 							1);
-						out_buffer.set_voxel_f(fractional_part, xi, elevation_at_position - y_low, zi, 1);
+						out_buffer.set_voxel_f(0.5-top_cell_value, xi, top_cell, zi, 1);
 					}
 				}
 			}
