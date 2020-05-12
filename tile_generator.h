@@ -30,7 +30,7 @@ private:
 		Ref<Image> image;
 	};
 	std::array<std::optional<cache_entry_t>,4> _image_cache;
-	int _latest_cache_entry = 0;
+	int _next_cache_entry = 0;
 	std::unordered_map<key_t,String,std::function<size_t(key_t)>> _tile_map;
 	constexpr int _floor_div(const int n, const int d){
 		if (n >= 0) {

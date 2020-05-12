@@ -52,6 +52,11 @@ constexpr int absmod(const int n, const int d) {
 
 const inline std::optional<Ref<Image>> TileGenerator::_get_tile_from_tile_key(const TileGenerator::key_t tile_key) {
 	// examine cache
+	for (int i = 0; i < 4; i++) {
+		if (_image_cache[i] && _image_cache[i]->tile_key == tile_key) {
+			return _image_cache[i]->image;
+		}
+	}
 	
 	// load if not in cache
 	auto it = _tile_map.find(tile_key);
@@ -65,8 +70,10 @@ const inline std::optional<Ref<Image>> TileGenerator::_get_tile_from_tile_key(co
 	}
 	
 	// save to cache
+	_image_cache[_next_cache_entry] = cache_entry_t{.tile_key = tile_key, .image = tile_img};
+	_next_cache_entry = (_next_cache_entry + 1) % 4;
 	
-	return std::optional<Ref<Image>>(tile_img);
+	return tile_img;
 };
 
 void TileGenerator::generate_block(VoxelBlockRequest &input) {
