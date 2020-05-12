@@ -50,6 +50,25 @@ constexpr int absmod(const int n, const int d) {
 	}
 };
 
+const inline std::optional<Ref<Image>> TileGenerator::_get_tile_from_tile_key(const TileGenerator::key_t tile_key) {
+	// examine cache
+	
+	// load if not in cache
+	auto it = _tile_map.find(tile_key);
+	if (it == _tile_map.end()) {
+		return std::optional<Ref<Image>>();
+	}
+	RES tile_res = ResourceLoader::load(it->second);
+	Ref<Image> tile_img = Ref<Image>(Object::cast_to<Image>(*tile_res));
+	if (!tile_img.is_valid()) {
+		return std::optional<Ref<Image>>();
+	}
+	
+	// save to cache
+	
+	return std::optional<Ref<Image>>(tile_img);
+};
+
 void TileGenerator::generate_block(VoxelBlockRequest &input) {
 	ERR_FAIL_COND(input.voxel_buffer.is_null());
 	ERR_FAIL_COND(input.lod < 0);
@@ -73,12 +92,7 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 	
 	const int tile_size = 3000;
 	key_t tile_key = _get_tile_key_from_position(x_low, z_low);
-	auto it = _tile_map.find(tile_key);
-	RES tile_res;
-	if (it != _tile_map.end()) {
-		tile_res = ResourceLoader::load(it->second);
-	}
-	Ref<Image> tile_img = Ref<Image>(Object::cast_to<Image>(*tile_res));
+	std::optional<Ref<Image>> tile_img = _get_tile_from_tile_key(tile_key);
 	
 	for (int xi = 0; xi < buffer_size.x; xi++) {
 		const int x_position = x_low + xi * stride;
@@ -87,23 +101,15 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 			const key_t tile_key_for_position = _get_tile_key_from_position(x_position, z_position);
 			if (tile_key != tile_key_for_position) {
 				tile_key = tile_key_for_position;
-				it = _tile_map.find(tile_key);
-				if (it != _tile_map.end()) {
-					tile_res = ResourceLoader::load(it->second);
-					tile_img = Ref<Image>(Object::cast_to<Image>(*tile_res));
-				}
-				else {
-					tile_res = RES();
-					tile_img = Ref<Image>();
-				}
+				tile_img = _get_tile_from_tile_key(tile_key);
 			}
 			
-			if (tile_img.is_valid()) {
+			if (tile_img && tile_img->is_valid()) {
 				const int tile_reference_position_x = absmod(x_position, tile_size);
 				const int tile_reference_position_z = absmod(z_position, tile_size);
-				tile_img->lock();
-				const float elevation_at_position = tile_img->get_pixel(tile_reference_position_x, tile_reference_position_z).r;
-				tile_img->unlock();
+				(*tile_img)->lock();
+				const float elevation_at_position = (*tile_img)->get_pixel(tile_reference_position_x, tile_reference_position_z).r;
+				(*tile_img)->unlock();
 				if (elevation_at_position >= y_low) {
 					if (elevation_at_position >= y_high) {
 						out_buffer.fill_area(1,
