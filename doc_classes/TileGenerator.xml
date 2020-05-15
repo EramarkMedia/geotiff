@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<class name="TileGenerator" inherits="VoxelGenerator" version="3.2">
+	<brief_description>
+		Height map voxel generator that takes multiple images as a tile map.
+	</brief_description>
+	<description>
+		The TileGenerator voxel generator will take one or more Image resources, arranged in a grid, and produce a height map in voxel form.
+		Just set the TileGenerator as the fallback voxel generator in your scene, and assign the resource locations with the [method set_cell] method.
+		Tile allocation is sparce, and any omitted tiles will render as flat.
+		Current implementation is hard coded for 3000 by 3000 pixel/voxel resolution per tile.
+		[codeblock]
+		func _ready():
+		    var tile_generator = $VoxelLodTerrain.stream.fallback_stream
+		    tile_generator.set_cell(-1,-1,"res://assets/Q4111E.tif")
+		    tile_generator.set_cell( 0,-1,"res://assets/Q4111G.tif")
+		    tile_generator.set_cell(-1, 0,"res://assets/P4222F.tif")
+		    tile_generator.set_cell( 0, 0,"res://assets/P4222H.tif")
+		[/codeblock]
+	</description>
+	<tutorials>
+	</tutorials>
+	<methods>
+		<method name="set_cell">
+			<return type="void">
+			</return>
+			<argument index="0" name="x" type="int">
+			</argument>
+			<argument index="1" name="z" type="int">
+			</argument>
+			<argument index="2" name="resource" type="String">
+			</argument>
+			<description>
+				Adds a tile to the tile map represented by the TileGenerator. Takes an inegral x an z value identifying the tile and a string that identifies and Image resource that is loaded when the tile needs to be rendered.
+			</description>
+		</method>
+	</methods>
+	<members>
+		<member name="ceiling_elevation" type="int" setter="set_ceiling_elevation" getter="get_ceiling_elevation" default="256">
+			High elevation clamp. Any voxel higher than this elevation will skip rendering an will be left empty.
+		</member>
+		<member name="floor_elevation" type="int" setter="set_floor_elevation" getter="get_floor_elevation" default="0">
+			Low elevation clamp. Any voxel lower than this elevation will skip rendering an will be left solid.
+		</member>
+	</members>
+	<constants>
+	</constants>
+</class>

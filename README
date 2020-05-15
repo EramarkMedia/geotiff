@@ -1,0 +1,21 @@
+This is a Godot module that adds two components. First it allows GeoTIFF files to be imported as Image resources. It should be enough to just add the TIFF file as an asset as Godot doesn't have TIFF support out of the box. Second it allows Image resources to be assembled into a tile map and a voxel height map be generated from that.
+
+DEPENDENCIES:
+This module relies on Zylann's voxel module to handle voxel rendering.
+https://github.com/Zylann/godot_voxel
+
+This module requires libtiff and libgeotiff for importing GeoTIFF files. This is a dependency of the editor only.
+https://libtiff.gitlab.io/libtiff/
+https://github.com/OSGeo/libgeotiff
+
+COMPILING:
+First make a working build environment of Godot. Version 3.2 was used in developing this module, but other versions may work.
+https://docs.godotengine.org/en/stable/development/compiling/index.html
+Second, add Zylann's voxel module.
+https://github.com/Zylann/godot_voxel/blob/master/doc/02_build-voxel-tools.md
+Third, download and install libtiff and libgeotiff. This is just used by the editor, so they don't need to be bundled in with any exports.
+Last, add this module to Godot. Just put the source tree for this module into a folder called "geotiff" in the modules folder in the Godot source tree.
+
+USE:
+Once everything is compiled and installed, usage is quite simple. Open Godot and create your game project. Drop in any geotiff files you want as a height map source. Currently the geotiff files must be 3000 by 3000 pixels. Create a scene to render the height map. You may use either VoxelTerrain or VoxelLodTerrain to render the terrain. It's recommended that VoxelStreamFile or VoxelStreamRegionFiles is used to persist any changes in terrain. TileGenerator should then be set as the "fallback stream."
+Use a script to assign the tiles at the time the scene loads. Get a handle to the TileGenerator object of the scene and call the set_cell method. The parameters are an x an z integer for which tile is being assigned, and a string for which Image resource to load in that tile.
