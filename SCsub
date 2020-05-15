@@ -2,7 +2,10 @@ Import('env')
 Import('env_modules')
 
 env_geotiff = env_modules.Clone()
-env.AppendUnique(LIBS=['tiff','geotiff'])
+
+if env['tools']:
+    env.AppendUnique(LIBS=['tiff','geotiff'])
+
 if env.msvc:
 	env_geotiff.Append(CXXFLAGS=['/std:c++17'])
 else:
