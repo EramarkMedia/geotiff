@@ -4,6 +4,7 @@
 #include "core/io/resource_importer.h"
 #include "editor/editor_file_system.h"
 
+#include "etrs89_projection.h"
 #include "geotiff_import.h"
 #include "tile_generator.h"
 
@@ -11,6 +12,7 @@ static GeotiffImportPlugin* geotiff_import_plugin_instance = nullptr;
 
 void register_geotiff_types() {
 	ClassDB::register_class<TileGenerator>();
+	ClassDB::register_class<ETRS89Projection>();
 
 #ifdef TOOLS_ENABLED
 	ClassDB::register_class<GeotiffImportPlugin>();
