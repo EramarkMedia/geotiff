@@ -1,6 +1,8 @@
 #include "tile_generator.h"
 #include "modules/voxel/voxel_buffer.h"
 #include "modules/voxel/math/vector3i.h"
+#include "core/io/resource_loader.h"
+#include "core/image.h"
 #include <cmath>
 
 TileGenerator::TileGenerator() : _floor_elevation(0), _ceiling_elevation(256) {
