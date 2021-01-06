@@ -98,9 +98,9 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 	if (y_low >= _ceiling_elevation) return;
 	
 	const int x_low = input.origin_in_voxels.x;
-	const int x_high = x_low + (buffer_size.x - 1) * stride;
+	//const int x_high = x_low + (buffer_size.x - 1) * stride;
 	const int z_low = input.origin_in_voxels.z;
-	const int z_high = z_low + (buffer_size.z - 1) * stride;
+	//const int z_high = z_low + (buffer_size.z - 1) * stride;
 	
 	const int tile_size = 3000;
 	TGI::key_t tile_key = TGI::get_tile_key_from_position(x_low, z_low);
