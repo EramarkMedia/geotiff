@@ -1,15 +1,18 @@
 #include "tile_generator.h"
+#include "tile_generator_functions.h"
 #include "modules/voxel/voxel_buffer.h"
 #include "modules/voxel/math/vector3i.h"
 #include "core/io/resource_loader.h"
 #include "core/image.h"
 #include <cmath>
 
+namespace TGI = TileGeneratorInternal;
+
 TileGenerator::TileGenerator() : _floor_elevation(0), _ceiling_elevation(256) {
-	std::function<size_t(key_t)> hash_f = [](key_t k) {
+	std::function<size_t(TGI::key_t)> hash_f = [](TGI::key_t k) {
 		return k.x ^ (k.z << 3);
 	};
-	_tile_map = std::unordered_map<key_t,String,std::function<size_t(key_t)>>(8, hash_f);
+	_tile_map = std::unordered_map<TGI::key_t,String,std::function<size_t(TGI::key_t)>>(8, hash_f);
 }
 
 void TileGenerator::_bind_methods() {
@@ -39,7 +42,7 @@ int TileGenerator::get_ceiling_elevation() {
 }
 
 void TileGenerator::set_cell(int x, int z, String resource) {
-	key_t k = key_t{.x = x, .z = z};
+	TGI::key_t k = TGI::key_t{.x = x, .z = z};
 	_tile_map.insert_or_assign(k, resource);
 }
 
@@ -52,7 +55,7 @@ constexpr int absmod(const int n, const int d) {
 	}
 };
 
-const inline std::optional<Ref<Image>> TileGenerator::_get_tile_from_tile_key(const TileGenerator::key_t tile_key) {
+const inline std::optional<Ref<Image>> TileGenerator::_get_tile_from_tile_key(const TGI::key_t tile_key) {
 	// examine cache
 	for (int i = 0; i < 4; i++) {
 		if (_image_cache[i] && _image_cache[i]->tile_key == tile_key) {
@@ -72,7 +75,7 @@ const inline std::optional<Ref<Image>> TileGenerator::_get_tile_from_tile_key(co
 	}
 	
 	// save to cache
-	_image_cache[_next_cache_entry] = cache_entry_t{.tile_key = tile_key, .image = tile_img};
+	_image_cache[_next_cache_entry] = TGI::cache_entry_t{.tile_key = tile_key, .image = tile_img};
 	_next_cache_entry = (_next_cache_entry + 1) % 4;
 	
 	return tile_img;
@@ -100,14 +103,14 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 	const int z_high = z_low + (buffer_size.z - 1) * stride;
 	
 	const int tile_size = 3000;
-	key_t tile_key = _get_tile_key_from_position(x_low, z_low);
+	TGI::key_t tile_key = TGI::get_tile_key_from_position(x_low, z_low);
 	std::optional<Ref<Image>> tile_img = _get_tile_from_tile_key(tile_key);
 	
 	for (int xi = 0; xi < buffer_size.x; xi++) {
 		const int x_position = x_low + xi * stride;
 		for (int zi = 0; zi < buffer_size.z; zi++) {
 			const int z_position = z_low + zi * stride;
-			const key_t tile_key_for_position = _get_tile_key_from_position(x_position, z_position);
+			const TGI::key_t tile_key_for_position = TGI::get_tile_key_from_position(x_position, z_position);
 			if (tile_key != tile_key_for_position) {
 				tile_key = tile_key_for_position;
 				tile_img = _get_tile_from_tile_key(tile_key);
