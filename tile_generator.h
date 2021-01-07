@@ -36,6 +36,7 @@ public:
 	void set_ceiling_elevation(int ceiling_elevation);
 	void set_cell(int x, int z, String resource);
 	int get_ceiling_elevation();
+	real_t get_elevation(const real_t x, const real_t z);
 };
 
 #endif // TILE_GENERATOR_H

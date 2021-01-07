@@ -23,6 +23,7 @@ void TileGenerator::_bind_methods() {
 	ClassDB::bind_method(D_METHOD("get_ceiling_elevation"), &TileGenerator::get_ceiling_elevation);
 	ADD_PROPERTY(PropertyInfo(Variant::INT, "ceiling_elevation"), "set_ceiling_elevation", "get_ceiling_elevation");
 	ClassDB::bind_method(D_METHOD("set_cell", "x", "z", "resource"), &TileGenerator::set_cell);
+	ClassDB::bind_method(D_METHOD("get_elevation", "x", "z"), &TileGenerator::get_elevation);
 }
 
 void TileGenerator::set_floor_elevation(int floor_elevation) {
@@ -161,4 +162,25 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 			}
 		}
 	}
+}
+
+real_t TileGenerator::get_elevation(const real_t x, const real_t z) {
+	HeightMapAccess height_map(this);
+	const int x_floor = floor(x);
+	const int z_floor = floor(z);
+	const std::optional<float> north_west_elevation = height_map.get_elevation(x_floor, z_floor);
+	const std::optional<float> north_east_elevation = height_map.get_elevation(x_floor + 1, z_floor);
+	const std::optional<float> south_west_elevation = height_map.get_elevation(x_floor, z_floor + 1);
+	const std::optional<float> south_east_elevation = height_map.get_elevation(x_floor + 1, z_floor + 1);
+	
+	if (north_west_elevation && north_east_elevation && south_west_elevation && south_east_elevation) {
+		const float west_east_part = x - x_floor;
+		const float north_south_part = z - z_floor;
+		const float north_mix = *north_east_elevation * west_east_part + *north_west_elevation * (1 - west_east_part);
+		const float south_mix = *south_east_elevation * west_east_part + *south_west_elevation * (1 - west_east_part);
+		const float full_mix = south_mix * north_south_part + north_mix * (1 - north_south_part);
+		return full_mix;
+	}
+	
+	return -1.0;
 }
