@@ -17,6 +17,7 @@ class TileGenerator : public  VoxelGenerator {
 	GDCLASS(TileGenerator, VoxelGenerator)
 
 private:
+	struct HeightMapAccess;
 	int _floor_elevation;
 	int _ceiling_elevation;
 	std::array<std::optional<TGI::cache_entry_t>,4> _image_cache;

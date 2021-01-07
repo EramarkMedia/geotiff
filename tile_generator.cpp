@@ -81,6 +81,34 @@ const inline std::optional<Ref<Image>> TileGenerator::_get_tile_from_tile_key(co
 	return tile_img;
 };
 
+struct TileGenerator::HeightMapAccess {
+	const int tile_size = 3000;
+	TGI::key_t tile_key;
+	std::optional<Ref<Image>> tile_img;
+	TileGenerator& tile_generator;
+	
+	HeightMapAccess(TileGenerator* tile_generator) : tile_generator(*tile_generator) {};
+	
+	std::optional<float> get_elevation(const int x, const int z) {
+		TGI::key_t request_tile_key = TGI::get_tile_key_from_position(x, z);
+		if (!tile_img || !tile_img->is_valid() || request_tile_key != tile_key) {
+			tile_img = tile_generator._get_tile_from_tile_key(request_tile_key);
+			tile_key = request_tile_key;
+		}
+		
+		if (!tile_img || !tile_img->is_valid() || request_tile_key != tile_key)
+			return false;
+		
+		const int tile_reference_position_x = absmod(x, tile_size);
+		const int tile_reference_position_z = absmod(z, tile_size);
+		(*tile_img)->lock();
+		const float elevation_at_position = (*tile_img)->get_pixel(tile_reference_position_x, tile_reference_position_z).r;
+		(*tile_img)->unlock();
+		
+		return elevation_at_position;
+	}
+};
+
 void TileGenerator::generate_block(VoxelBlockRequest &input) {
 	ERR_FAIL_COND(input.voxel_buffer.is_null());
 	ERR_FAIL_COND(input.lod < 0);
@@ -102,26 +130,15 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 	const int z_low = input.origin_in_voxels.z;
 	//const int z_high = z_low + (buffer_size.z - 1) * stride;
 	
-	const int tile_size = 3000;
-	TGI::key_t tile_key = TGI::get_tile_key_from_position(x_low, z_low);
-	std::optional<Ref<Image>> tile_img = _get_tile_from_tile_key(tile_key);
+	HeightMapAccess height_map(this);
 	
 	for (int xi = 0; xi < buffer_size.x; xi++) {
 		const int x_position = x_low + xi * stride;
 		for (int zi = 0; zi < buffer_size.z; zi++) {
 			const int z_position = z_low + zi * stride;
-			const TGI::key_t tile_key_for_position = TGI::get_tile_key_from_position(x_position, z_position);
-			if (tile_key != tile_key_for_position) {
-				tile_key = tile_key_for_position;
-				tile_img = _get_tile_from_tile_key(tile_key);
-			}
 			
-			if (tile_img && tile_img->is_valid()) {
-				const int tile_reference_position_x = absmod(x_position, tile_size);
-				const int tile_reference_position_z = absmod(z_position, tile_size);
-				(*tile_img)->lock();
-				const float elevation_at_position = (*tile_img)->get_pixel(tile_reference_position_x, tile_reference_position_z).r;
-				(*tile_img)->unlock();
+			const std::optional<float> elevation_at_position = height_map.get_elevation(x_position, z_position);
+			if (elevation_at_position) {
 				if (elevation_at_position >= y_low) {
 					if (elevation_at_position >= y_high) {
 						out_buffer.fill_area(1,
@@ -131,7 +148,7 @@ void TileGenerator::generate_block(VoxelBlockRequest &input) {
 					}
 					else {
 						float integral_part = 0;
-						float fractional_part = std::modf(elevation_at_position, &integral_part);
+						float fractional_part = std::modf(*elevation_at_position, &integral_part);
 						const int top_cell = (int)((integral_part - (float)y_low) / (float)stride);
 						const float top_cell_value = fractional_part / (float)stride;
 						out_buffer.fill_area(0,
