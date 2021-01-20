@@ -5,6 +5,7 @@
 #include "core/io/resource_loader.h"
 #include "core/image.h"
 #include <cmath>
+#include <mutex>
 
 namespace TGI = TileGeneratorInternal;
 
@@ -102,9 +103,16 @@ struct TileGenerator::HeightMapAccess {
 		
 		const int tile_reference_position_x = absmod(x, tile_size);
 		const int tile_reference_position_z = absmod(z, tile_size);
-		(*tile_img)->lock();
-		const float elevation_at_position = (*tile_img)->get_pixel(tile_reference_position_x, tile_reference_position_z).r;
-		(*tile_img)->unlock();
+		
+		float elevation_at_position = 0;
+		{
+			// Note: This seems redundant. Remove the extra lock once once the built in lock decides to work right.
+			static std::mutex get_pixel_mutex;
+			std::unique_lock get_pixel_lock(get_pixel_mutex);
+			(*tile_img)->lock();
+			elevation_at_position = (*tile_img)->get_pixel(tile_reference_position_x, tile_reference_position_z).r;
+			(*tile_img)->unlock();
+		}
 		
 		return elevation_at_position;
 	}
