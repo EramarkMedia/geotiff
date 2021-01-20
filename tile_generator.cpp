@@ -110,16 +110,18 @@ struct TileGenerator::HeightMapAccess {
 	}
 	
 	std::optional<float> get_elevation(const real_t x, const real_t z) {
-		const int x_floor = floor(x);
-		const int z_floor = floor(z);
+		const real_t x_scaled = x / 2;
+		const real_t z_scaled = z / 2;
+		const int x_floor = floor(x_scaled);
+		const int z_floor = floor(z_scaled);
 		const std::optional<float> north_west_elevation = get_elevation_internal(x_floor, z_floor);
 		const std::optional<float> north_east_elevation = get_elevation_internal(x_floor + 1, z_floor);
 		const std::optional<float> south_west_elevation = get_elevation_internal(x_floor, z_floor + 1);
 		const std::optional<float> south_east_elevation = get_elevation_internal(x_floor + 1, z_floor + 1);
 		
 		if (north_west_elevation && north_east_elevation && south_west_elevation && south_east_elevation) {
-			const float west_east_part = x - x_floor;
-			const float north_south_part = z - z_floor;
+			const float west_east_part = x_scaled - x_floor;
+			const float north_south_part = z_scaled - z_floor;
 			const float north_mix = *north_east_elevation * west_east_part + *north_west_elevation * (1 - west_east_part);
 			const float south_mix = *south_east_elevation * west_east_part + *south_west_elevation * (1 - west_east_part);
 			const float full_mix = south_mix * north_south_part + north_mix * (1 - north_south_part);
