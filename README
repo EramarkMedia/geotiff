@@ -12,7 +12,7 @@ COMPILING:
 First make a working build environment of Godot. Version 3.2 was used in developing this module, but other versions may work.
 https://docs.godotengine.org/en/stable/development/compiling/index.html
 Second, add Zylann's voxel module.
-https://github.com/Zylann/godot_voxel/blob/master/doc/02_build-voxel-tools.md
+https://voxel-tools.readthedocs.io/en/latest/getting_the_module/
 Third, download and install libtiff and libgeotiff. This is just used by the editor, so they don't need to be bundled in with any exports.
 Last, add this module to Godot. Just put the source tree for this module into a folder called "geotiff" in the modules folder in the Godot source tree.
 
