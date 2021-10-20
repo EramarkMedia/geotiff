@@ -1,7 +1,7 @@
 #include "tile_generator.h"
 #include "tile_generator_functions.h"
-#include "modules/voxel/voxel_buffer.h"
-#include "modules/voxel/math/vector3i.h"
+#include "modules/voxel/storage/voxel_buffer.h"
+#include "modules/voxel/util/math/vector3i.h"
 #include "core/io/resource_loader.h"
 #include "core/image.h"
 #include <cmath>
